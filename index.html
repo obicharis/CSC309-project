@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CSC 309 – AI Tutor</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;background:linear-gradient(135deg,#0d1117 0%,#161b22 50%,#0d1117 100%);font-family:'Courier New',Consolas,monospace;color:#e6edf3;display:flex;flex-direction:column}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+  .d1{animation:bounce 1.2s infinite 0s}.d2{animation:bounce 1.2s infinite .15s}.d3{animation:bounce 1.2s infinite .3s}
+  .dot{width:8px;height:8px;border-radius:50%;background:#00d4aa;display:inline-block}
+  .sg:hover{background:rgba(0,212,170,.18)!important;transform:translateY(-1px);cursor:pointer}
+  textarea:focus{border-color:rgba(0,212,170,.4)!important;outline:none}
+  .sb:hover:not(:disabled){transform:scale(1.06);box-shadow:0 4px 14px rgba(0,212,170,.35)}
+  .sb:disabled{cursor:not-allowed}
+  ol,ul{padding-left:20px}li{margin-bottom:4px;line-height:1.6}
+  p{margin:5px 0;line-height:1.65}
+
+  /* Key modal */
+  #keyModal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+  #keyBox{background:#161b22;border:1px solid #30363d;border-radius:16px;padding:32px 28px;max-width:460px;width:100%}
+  #keyBox h2{color:#00d4aa;font-size:17px;margin-bottom:10px}
+  #keyBox p{font-size:13px;color:#8b949e;line-height:1.65;margin-bottom:18px}
+  #keyBox a{color:#00a8ff;text-decoration:none}
+  #keyInput{width:100%;background:rgba(22,27,34,.8);border:1px solid #30363d;border-radius:10px;padding:11px 14px;font-size:13px;color:#e6edf3;font-family:inherit;margin-bottom:14px}
+  #keyInput:focus{border-color:rgba(0,212,170,.4);outline:none}
+  #keyBtn{width:100%;background:linear-gradient(135deg,#00d4aa,#00a8ff);border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;color:#0d1117;cursor:pointer;font-family:inherit;letter-spacing:.02em}
+  #keyBtn:hover{opacity:.9}
+  #keyErr{font-size:12px;color:#ff7b72;margin-top:8px;display:none}
+
+  /* Header */
+  #hdr{border-bottom:1px solid #21262d;padding:14px 18px;background:rgba(13,17,23,.97);position:sticky;top:0;z-index:10}
+  #hdrInner{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  #badge{background:linear-gradient(135deg,#00d4aa,#00a8ff);border-radius:7px;padding:5px 9px;font-size:11px;font-weight:700;color:#0d1117;letter-spacing:.05em;flex-shrink:0}
+  #title{font-size:14px;font-weight:700;color:#00d4aa;letter-spacing:.02em}
+  #sub{font-size:11px;color:#8b949e;margin-top:1px}
+  #statusDot{width:8px;height:8px;border-radius:50%;background:#00d4aa;box-shadow:0 0 7px #00d4aa;animation:pulse 2s infinite;flex-shrink:0;margin-left:auto}
+
+  /* Chat */
+  #chat{flex:1;max-width:760px;width:100%;margin:0 auto;padding:18px 14px 8px;display:flex;flex-direction:column;gap:14px}
+  #welcome{text-align:center;padding:32px 16px 16px}
+  #wIcon{font-size:46px;margin-bottom:10px}
+  #wTitle{font-size:19px;font-weight:700;color:#00d4aa;margin-bottom:7px}
+  #wText{font-size:13px;color:#8b949e;line-height:1.65;margin-bottom:22px}
+  #suggestions{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+  .sg{background:rgba(0,212,170,.07);border:1px solid rgba(0,212,170,.22);border-radius:20px;padding:6px 13px;font-size:12px;color:#00d4aa;transition:all .15s;font-family:inherit}
+  .userBubble{align-self:flex-end;max-width:80%;background:linear-gradient(135deg,rgba(0,168,255,.15),rgba(0,212,170,.15));border:1px solid rgba(0,168,255,.3);border-radius:16px 16px 3px 16px;padding:11px 15px;font-size:14px;color:#cdd9e5;line-height:1.5;word-break:break-word}
+  .aiBubble{align-self:flex-start;max-width:92%;background:rgba(22,27,34,.9);border:1px solid #30363d;border-radius:16px 16px 16px 3px;padding:13px 16px;font-size:13.5px;color:#e6edf3;word-break:break-word}
+  .aiLabel{font-size:10px;font-weight:700;color:#00d4aa;letter-spacing:.1em;margin-bottom:8px}
+  #thinking{align-self:flex-start;display:flex;gap:6px;padding:14px 18px;background:rgba(22,27,34,.8);border:1px solid #30363d;border-radius:16px 16px 16px 3px;display:none}
+  #errBox{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.35);border-radius:10px;padding:10px 14px;font-size:13px;color:#ff7b72;text-align:center;display:none}
+
+  /* Input */
+  #inputArea{border-top:1px solid #21262d;background:rgba(13,17,23,.97);padding:12px 14px 18px;position:sticky;bottom:0}
+  #inputWrap{max-width:760px;margin:0 auto;display:flex;gap:9px;align-items:flex-end}
+  #qInput{flex:1;background:rgba(22,27,34,.8);border:1px solid #30363d;border-radius:13px;padding:11px 15px;font-size:14px;color:#e6edf3;font-family:inherit;resize:none;min-height:46px;max-height:130px;overflow-y:auto;line-height:1.5;transition:border-color .15s}
+  #sendBtn{background:linear-gradient(135deg,#00d4aa,#00a8ff);border:none;border-radius:12px;width:46px;height:46px;font-size:20px;color:#0d1117;flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  #hint{max-width:760px;margin:5px auto 0;font-size:11px;color:#484f58;text-align:center}
+
+  @media(max-width:480px){
+    #keyBox{padding:24px 18px}
+    #hdr{padding:11px 14px}
+    #chat{padding:14px 10px 6px}
+  }
+</style>
+</head>
+<body>
+
+<!-- API Key Modal -->
+<div id="keyModal">
+  <div id="keyBox">
+    <h2>🔑 Enter your Anthropic API Key</h2>
+    <p>This key is used only in your browser to answer questions. It is never stored or sent anywhere else.<br><br>
+    Get a free key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+    <input id="keyInput" type="password" placeholder="sk-ant-api03-…" autocomplete="off"/>
+    <button id="keyBtn" onclick="saveKey()">Start Studying →</button>
+    <div id="keyErr">Please enter a valid API key (starts with sk-ant-)</div>
+  </div>
+</div>
+
+<!-- Header -->
+<div id="hdr">
+  <div id="hdrInner">
+    <div id="badge">CSC 309</div>
+    <div>
+      <div id="title">AI Question Answering System</div>
+      <div id="sub">Introduction to Artificial Intelligence · RAG-Powered</div>
+    </div>
+    <div id="statusDot"></div>
+  </div>
+</div>
+
+<!-- Chat -->
+<div id="chat">
+  <div id="welcome">
+    <div id="wIcon">🤖</div>
+    <div id="wTitle">Ask me anything about CSC 309</div>
+    <div id="wText">This system searches your course material to find relevant context,<br>then generates accurate answers grounded in your lecture notes.</div>
+    <div id="suggestions">
+      <button class="sg" onclick="ask('What is Artificial Intelligence?')">What is Artificial Intelligence?</button>
+      <button class="sg" onclick="ask('Explain the Turing Test')">Explain the Turing Test</button>
+      <button class="sg" onclick="ask('What are types of Machine Learning?')">What are types of Machine Learning?</button>
+      <button class="sg" onclick="ask('How do CNNs work?')">How do CNNs work?</button>
+      <button class="sg" onclick="ask('What is NLP and its applications?')">What is NLP and its applications?</button>
+      <button class="sg" onclick="ask('Advantages and disadvantages of AI')">Advantages and disadvantages of AI</button>
+      <button class="sg" onclick="ask('Explain backpropagation')">Explain backpropagation</button>
+      <button class="sg" onclick="ask('What is reinforcement learning?')">What is reinforcement learning?</button>
+      <button class="sg" onclick="ask('How does BERT work?')">How does BERT work?</button>
+      <button class="sg" onclick="ask('What are Expert Systems?')">What are Expert Systems?</button>
+    </div>
+  </div>
+  <div id="thinking"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div></div>
+  <div id="errBox"></div>
+  <div id="bottom"></div>
+</div>
+
+<!-- Input -->
+<div id="inputArea">
+  <div id="inputWrap">
+    <textarea id="qInput" rows="1" placeholder="Ask a question about CSC 309 material…" onkeydown="handleKey(event)"></textarea>
+    <button id="sendBtn" class="sb" onclick="ask()">↑</button>
+  </div>
+  <div id="hint">Enter to send · Shift+Enter for new line</div>
+</div>
+
+<script>
+// ─── Knowledge Base ───────────────────────────────────────────────────────────
+const CHUNKS = [
+"Artificial Intelligence (AI) is a branch of Science which deals with helping machines finding solutions to complex problems in a more human-like fashion. This generally involves borrowing characteristics from human intelligence, and applying them as algorithms in a computer friendly way. AI is generally associated with Computer Science, but it has many important links with other fields such as Maths, Psychology, Cognition, Biology and Philosophy. AI was formally initiated in 1956, when the name was coined. AI currently encompasses subfields from general-purpose areas such as perception and logical reasoning, to specific tasks such as playing chess, proving mathematical theorems, writing poetry, and diagnosing diseases.",
+
+"Definition of Artificial Intelligence: AI is the computer-based exploration of methods for solving challenging tasks that have traditionally depended on people for solution. Such tasks include complex logical inference, diagnosis, visual recognition, comprehension of natural language, game playing, explanation, and planning. In brief summary, AI is concerned with developing computer systems that can store knowledge and effectively use the knowledge to help solve problems and accomplish tasks.",
+
+"Alternative definitions of AI: (1) AI is the study of how to make computers do things which at the moment people do better. (2) AI is a field of study that encompasses computational techniques for performing tasks that apparently require intelligence when performed by humans. (3) AI is the branch of computer science concerned with the automation of intelligent behaviour. (4) AI is the field of study that seeks to explain and emulate intelligent behaviour in terms of computational processes. (5) AI is the part of computer science concerned with designing intelligent computer systems that exhibit characteristics we associate with intelligence in human behaviour such as understanding language, learning, reasoning and solving problems.",
+
+"The four possible goals in Artificial Intelligence: (1) Systems that think like humans – cognitive modelling approach. (2) Systems that act like humans – Turing Test approach. (3) Systems that think rationally – laws of thought approach using logic. (4) Systems that act rationally – rational agent approach. Historically, all four approaches have been followed. A tension exists between human-centred and rationality-centred approaches.",
+
+"The Turing Test, proposed by Alan Turing (1950), was designed to provide a satisfactory operational definition of intelligence. Turing defined intelligent behaviour as the ability to achieve human-level performance in cognitive tasks sufficient to fool an interrogator communicating via text. The computer would need: natural language processing, knowledge representation, automated reasoning, and machine learning. The Total Turing Test adds video signal and physical interaction, requiring computer vision and robotics. Critics include John Searle's Chinese Room argument – following rules for Chinese symbols does not imply understanding, just as a computer executing a program performs syntax without semantics.",
+
+"History of AI milestones: 1943 – McCulloch and Pitts proposed artificial neurons. 1950 – Alan Turing's 'Computing Machinery and Intelligence'. 1956 – Dartmouth Conference, the official birth of AI. 1957–1970 – Early enthusiasm: GPS and ELIZA chatbot. 1966–1973 – First AI Winter. 1980s – Expert systems boom and second AI Winter. 1990s – Return of statistical methods and neural networks. 2012 – AlexNet deep learning breakthrough. 2017 – Transformer architecture. 2018–present – Large Language Models (BERT, GPT).",
+
+"Types of AI based on capabilities: (1) Narrow AI (Weak AI) – specific task, e.g., facial recognition, spam filters. All existing AI is narrow. (2) General AI (Strong AI) – any intellectual task a human can do; does not yet exist. (3) Super AI – surpasses human intelligence; purely theoretical. Types based on functionalities: (1) Reactive Machines – no memory, responds only to current input (e.g., IBM Deep Blue). (2) Limited Memory – uses past experiences (e.g., self-driving cars). (3) Theory of Mind – understands emotions; still under research. (4) Self-Aware AI – human-like consciousness; purely theoretical.",
+
+"Applications of AI: E-Commerce (personalized recommendations, fraud detection), Education (intelligent tutoring, adaptive learning), Healthcare (medical imaging, drug discovery), Navigation (GPS, Google Maps), Robotics (industrial automation, surgical robots), NLP (translation, sentiment analysis), Computer Vision (object detection, face recognition), Human Resources (resume screening), Finance (algorithmic trading). Advantages: reduces human error, 24/7 availability, zero risk in dangerous tasks, digital assistants, unbiased decisions. Disadvantages: lacks creativity, no emotional intelligence, raises privacy concerns, job displacement.",
+
+"Natural Language Processing (NLP) is a subfield of AI focused on interaction between computers and humans through natural language. NLP combines computational linguistics with ML and deep learning. Key tasks: Machine Translation, Sentiment Analysis, Named Entity Recognition (NER), Text Summarization, Question Answering, Speech Recognition, Chatbots. Key concepts: Tokenization, Stop word removal, Stemming, Lemmatization, POS Tagging, Parsing, Bag of Words (BoW), TF-IDF, Word Embeddings (Word2Vec, GloVe), Contextual Embeddings (BERT).",
+
+"History of NLP: 1954 – Georgetown-IBM machine translation experiment. 1966 – ELIZA chatbot (Weizenbaum, MIT), simulated psychotherapist via pattern-matching. 1980s – Statistical methods replacing rule-based systems. 1990s – HMMs for speech recognition. 2000s – SVM for text classification. 2010s – RNNs, LSTMs, attention mechanisms. 2017 – Transformer architecture (Vaswani et al., 'Attention is All You Need'). 2018 – BERT by Google. 2018–present – GPT series by OpenAI, large language models.",
+
+"The Transformer architecture (2017) revolutionized NLP. Components: Self-attention (each word attends to all others), Multi-head attention (multiple attention heads), Positional encoding (encodes sequence position), Feed-forward layers, Encoder-Decoder structure. Transformers enabled BERT (bidirectional encoder) and GPT (generative decoder), the basis for all modern LLMs. Key advantage: parallelizable unlike RNNs, captures long-range dependencies.",
+
+"BERT (Bidirectional Encoder Representations from Transformers) by Google (2018): Pre-trained on Masked Language Modelling (MLM) and Next Sentence Prediction. Bidirectional – reads both left and right context. Fine-tuned for classification, NER, QA. Variants: RoBERTa, ALBERT, DistilBERT. GPT by OpenAI: Unidirectional (left-to-right) decoder. GPT-1 (2018) → GPT-2 (2019) → GPT-3 (2020, 175B params) → GPT-4 (2023, multimodal). ChatGPT uses RLHF (Reinforcement Learning from Human Feedback). Both revolutionized NLP benchmarks (GLUE, SQuAD).",
+
+"Word Embeddings – dense vector representations: Word2Vec (Skip-gram/CBOW), GloVe (co-occurrence statistics), FastText (sub-word). Key property: king − man + woman ≈ queen. Contextual embeddings (ELMo, BERT) solve polysemy. Machine Learning is a subset of AI enabling systems to learn from data. Types: (1) Supervised – labelled data (classification, regression). (2) Unsupervised – unlabelled data (clustering, dimensionality reduction). (3) Reinforcement – rewards and penalties. (4) Semi-supervised – small labelled + large unlabelled data.",
+
+"Key ML algorithms: Linear Regression, Logistic Regression, Decision Trees, Random Forests, SVM (finds optimal hyperplane), KNN (nearest neighbours), Naive Bayes (Bayes theorem), Neural Networks, K-Means Clustering. Evaluation metrics: Accuracy, Precision, Recall, F1-Score, ROC-AUC (classification); MAE, MSE, RMSE, R² (regression). K-fold cross-validation estimates generalisation. Overfitting solutions: regularization (L1/L2), dropout, early stopping, data augmentation. Underfitting: increase model complexity.",
+
+"Deep Learning uses multi-layered neural networks to learn representations automatically. Key architectures: CNN (Convolutional Neural Networks – image tasks, local features via convolution), RNN (sequential data; LSTM and GRU solve vanishing gradient), Transformers (attention-based, dominate NLP and vision), GAN (generator vs discriminator for generative tasks), Autoencoders (encoder-decoder for compression). The Perceptron (Rosenblatt, 1957) is the basic neural unit. Activation functions: Sigmoid, Tanh, ReLU (most common), Leaky ReLU, Softmax.",
+
+"CNN architecture: Input → Convolutional Layers (learn edges, textures, shapes via filters) → ReLU → Pooling (spatial downsampling) → Fully Connected Layers → Softmax output. CNNs exploit spatial locality and translational invariance. AlexNet (2012) won ImageNet and launched the deep learning era. Modern architectures: VGG, ResNet (skip connections), Inception, EfficientNet, Vision Transformer (ViT). Used for image classification, object detection (YOLO, Faster R-CNN), segmentation, medical imaging.",
+
+"Backpropagation trains neural networks: (1) Forward pass – compute predictions layer by layer. (2) Compute loss (cross-entropy, MSE). (3) Backward pass – compute gradients using chain rule. (4) Update weights: w = w − α∇L. Optimizers: SGD, Adam (adaptive, most popular), RMSProp, Adagrad. Transfer Learning: reuse pre-trained models (ResNet, BERT) and fine-tune for new tasks. Benefits: less data needed, faster training, better performance. Pre-trained models: VGG, ResNet, Inception (vision); BERT, GPT, RoBERTa (NLP).",
+
+"Reinforcement Learning (RL): agent learns by interacting with environment to maximize cumulative reward. Key concepts: Agent, Environment, State, Action, Reward, Policy, Value Function. Mathematical framework: Markov Decision Process (MDP). Algorithms: Q-Learning (state-action values), Deep Q-Network (DQN), Policy Gradient, Actor-Critic. Examples: AlphaGo (2016) defeated world champion using MCTS + deep RL. AlphaZero mastered chess, shogi, Go from self-play. Applications: game playing, robotics, autonomous vehicles, recommendation systems.",
+
+"Expert Systems emulate human expert decision-making. Components: (1) Knowledge Base – domain facts and rules. (2) Inference Engine – forward chaining (data-driven) or backward chaining (goal-driven). (3) User Interface. Examples: MYCIN (medical diagnosis, antibiotics), DENDRAL (chemistry), XCON (computer configuration). Limitation: knowledge acquisition bottleneck. Knowledge Representation: Semantic Networks, Frames, Propositional Logic, First-Order Logic (FOL) with quantifiers ∀ ∃, Production Rules (IF-THEN), Ontologies. Bayesian Networks handle uncertainty. Fuzzy Logic allows degrees of truth.",
+
+"Search algorithms: Uninformed: BFS (breadth-first, complete, optimal for uniform cost), DFS (depth-first, memory efficient), Uniform Cost Search, Iterative Deepening. Informed: Greedy Best-First, A* uses f(n) = g(n) + h(n) (admissible heuristic → optimal). Local search: Hill Climbing, Simulated Annealing, Genetic Algorithms (selection, crossover, mutation). Game Playing: Minimax (two-player zero-sum), Alpha-Beta Pruning (doubles effective search depth), MCTS (Monte Carlo Tree Search with simulation). CSP: backtracking, arc consistency (AC-3), MRV heuristic.",
+
+"Computer Vision enables machines to interpret visual information. Tasks: Image Classification, Object Detection (YOLO, Faster R-CNN, SSD), Image Segmentation (semantic/instance), Facial Recognition, OCR, Pose Estimation. Image recognition pipeline: (1) Acquisition, (2) Preprocessing (resize, normalize, denoise), (3) Feature Extraction (edges, corners, textures), (4) Classification (ML/DL). Traditional methods: edge detection (Sobel, Canny), template matching. Deep learning methods (CNN, DNN) give highest accuracy. Applications: smartphones, autonomous vehicles, medical imaging (X-ray/MRI), biometrics, industrial inspection.",
+
+"Advantages of image recognition: fast and accurate, reduces human effort, continuous operation, works in dangerous environments. Limitations: requires large datasets, sensitive to image quality, high computational cost, affected by lighting and angle variations. Robotics combines sensors (cameras, LIDAR), actuators (motors), and AI. SLAM (Simultaneous Localisation and Mapping) builds a map while tracking position. Applications: manufacturing, surgery (da Vinci), Mars rovers, household robots (Roomba), autonomous vehicles (SAE Levels 0–5).",
+
+"Ethical issues in AI: (1) Bias and Fairness – AI amplifies training data biases. (2) Privacy – mass data collection. (3) Accountability – who is responsible for AI decisions? (4) Transparency – XAI (Explainable AI) uses LIME and SHAP for interpretability. (5) Job Displacement – automation replacing workers. (6) Autonomous Weapons. (7) Digital Divide. AI Safety and Alignment: ensuring AI acts in accordance with human values. Governance: EU AI Act (risk-based regulation), GDPR (right to explanation). Future: AGI, quantum AI, neuromorphic computing, federated learning.",
+
+"Speech Recognition pipeline: (1) Audio preprocessing (noise reduction, framing). (2) Feature extraction (MFCC – Mel-Frequency Cepstral Coefficients). (3) Acoustic model (features → phonemes). (4) Language model (word sequences). (5) Decoder combines both. Modern systems: DeepSpeech, Whisper (OpenAI end-to-end). Probabilistic reasoning: Bayes' Theorem P(A|B) = P(B|A)·P(A)/P(B). Bayesian Networks: directed acyclic graphs for conditional independencies. Hidden Markov Models (HMMs) for sequential data. Kalman Filters for robotics state estimation.",
+
+"The CSC 309 course (Introduction to Artificial Intelligence) covers: AI fundamentals and history, Problem solving and search algorithms, Knowledge representation and reasoning, Machine learning (supervised, unsupervised, reinforcement), Deep learning and neural networks, Natural Language Processing (NLP), Computer Vision and Image Recognition, Robotics and autonomous systems, AI Ethics and future directions. Lecturer: A.F. Kana. The course examines both theoretical foundations and practical applications of AI.",
+];
+
+// ─── Retrieval ────────────────────────────────────────────────────────────────
+const SW=new Set(["the","and","for","are","but","not","you","all","any","can","had","her","was","one","our","out","get","has","him","his","how","its","may","new","now","own","see","two","who","did","does","each","from","have","into","more","such","than","that","them","then","they","this","with","been","also","some","what","when","will","your","about","after","their","there","these","those","which","would","could","should","other","being","used","using","both"]);
+function tok(t){return t.toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(w=>w.length>2&&!SW.has(w));}
+function retrieve(q,k=5){
+  const qt=tok(q);
+  return CHUNKS.map(c=>({c,s:qt.reduce((s,t)=>{const m=(c.toLowerCase().match(new RegExp(`\\b${t}`,"g"))||[]).length;return s+(m>0?1+Math.log(1+m):0);},0)}))
+    .filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,k).map(x=>x.c);
+}
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let API_KEY = sessionStorage.getItem("csc309_key") || "";
+let loading = false;
+
+function saveKey(){
+  const val = document.getElementById("keyInput").value.trim();
+  if(!val.startsWith("sk-ant-") && !val.startsWith("sk-")){
+    document.getElementById("keyErr").style.display="block";return;
+  }
+  API_KEY = val;
+  sessionStorage.setItem("csc309_key", val);
+  document.getElementById("keyModal").style.display="none";
+}
+
+if(API_KEY) document.getElementById("keyModal").style.display="none";
+
+document.getElementById("keyInput").addEventListener("keydown",e=>{if(e.key==="Enter")saveKey();});
+
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+function scrollBottom(){document.getElementById("bottom").scrollIntoView({behavior:"smooth"});}
+
+function addBubble(role,text){
+  const chat=document.getElementById("chat");
+  const welcome=document.getElementById("welcome");
+  if(welcome) welcome.style.display="none";
+
+  const div=document.createElement("div");
+  if(role==="user"){
+    div.className="userBubble";
+    div.textContent=text;
+  } else {
+    div.className="aiBubble";
+    const label=document.createElement("div");
+    label.className="aiLabel";label.textContent="⚡ COURSE TUTOR";
+    div.appendChild(label);
+    renderMarkdown(text,div);
+  }
+  // Insert before thinking and bottom
+  chat.insertBefore(div,document.getElementById("thinking"));
+  scrollBottom();
+  return div;
+}
+
+function renderMarkdown(text,container){
+  const lines=text.split("\n");let i=0;
+  while(i<lines.length){
+    const l=lines[i];
+    if(!l.trim()){i++;continue;}
+    if(/^\d+\.\s/.test(l)){
+      const ol=document.createElement("ol");ol.style.margin="6px 0";
+      while(i<lines.length&&/^\d+\.\s/.test(lines[i])){
+        const li=document.createElement("li");li.textContent=lines[i++].replace(/^\d+\.\s/,"");ol.appendChild(li);}
+      container.appendChild(ol);
+    } else if(/^[-•]\s/.test(l)){
+      const ul=document.createElement("ul");ul.style.margin="6px 0";
+      while(i<lines.length&&/^[-•]\s/.test(lines[i])){
+        const li=document.createElement("li");li.textContent=lines[i++].replace(/^[-•]\s/,"");ul.appendChild(li);}
+      container.appendChild(ul);
+    } else {
+      const p=document.createElement("p");p.textContent=l;container.appendChild(p);i++;
+    }
+  }
+}
+
+function setLoading(on){
+  loading=on;
+  document.getElementById("thinking").style.display=on?"flex":"none";
+  document.getElementById("sendBtn").disabled=on;
+  document.getElementById("qInput").disabled=on;
+  if(on)scrollBottom();
+}
+
+function showErr(msg){
+  const e=document.getElementById("errBox");
+  e.textContent="⚠ "+msg;e.style.display=msg?"block":"none";
+}
+
+// ─── Main Ask Function ────────────────────────────────────────────────────────
+async function ask(preset){
+  if(!API_KEY){document.getElementById("keyModal").style.display="flex";return;}
+  if(loading)return;
+  const input=document.getElementById("qInput");
+  const q=(preset||input.value).trim();
+  if(!q)return;
+  input.value="";showErr("");
+  addBubble("user",q);
+  setLoading(true);
+
+  try{
+    const ctx=retrieve(q).join("\n\n---\n\n");
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({
+        model:"claude-opus-4-5",max_tokens:1000,
+        system:`You are a helpful tutor for CSC 309 – Introduction to Artificial Intelligence. Answer questions using ONLY the course material context below. Be structured and clear. Use numbered lists or bullets where helpful. If the answer is not in the context, say so honestly.\n\nCOURSE MATERIAL:\n${ctx}`,
+        messages:[{role:"user",content:q}]
+      })
+    });
+    if(!resp.ok){const d=await resp.json();throw new Error(d.error?.message||`API ${resp.status}`);}
+    const data=await resp.json();
+    const answer=data.content?.map(b=>b.text||"").join("")||"No response.";
+    setLoading(false);
+    addBubble("assistant",answer);
+  } catch(err){
+    setLoading(false);
+    showErr(err.message||"Something went wrong. Check your API key.");
+  }
+}
+
+function handleKey(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();ask();}}
+
+// Auto-resize textarea
+document.getElementById("qInput").addEventListener("input",function(){
+  this.style.height="auto";this.style.height=Math.min(this.scrollHeight,130)+"px";
+});
+</script>
+</body>
+</html>
