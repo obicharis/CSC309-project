@@ -7,7 +7,7 @@ const path = require("path");
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(__dirname));
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
@@ -127,7 +127,7 @@ ${question.trim()}`;
 });
 
 // ─── Fallback ─────────────────────────────────────────────────────────────────
-app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+app.get("*", (req, res) => res.sendFile(path.join(__dirname, "index.html"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ CSC 309 AI Tutor running on http://localhost:${PORT}`));
