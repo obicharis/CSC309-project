@@ -73,7 +73,7 @@ app.post("/api/ask", async (req, res) => {
         "Authorization": `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3.1-8b-instruct:free",
+        model: "openrouter/auto",
         messages: [{ role: "user", content: prompt }],
       }),
     });
