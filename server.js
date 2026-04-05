@@ -1,4 +1,4 @@
-require("dotenv").config();
+constontent("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 const CHUNKS = [
   "Artificial Intelligence (AI) is a branch of Science which deals with helping machines finding solutions to complex problems in a more human-like fashion. AI was formally initiated in 1956. It encompasses subfields from perception and logical reasoning to chess, medical diagnosis, and language understanding.",
